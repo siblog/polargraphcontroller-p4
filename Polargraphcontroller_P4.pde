@@ -77,6 +77,10 @@ void processQueue() {
   if (commandQueue.isRunning() && serialComm.isConnected()) {
     // Only send next command if machine signals it's ready
     if (serialComm.isMachineReady()) {
+      // Mark current command as completed
+      commandQueue.markCurrentCommandComplete();
+      
+      // Send next command
       String cmd = commandQueue.pop();
       if (cmd != null) {
         serialComm.sendCommand(cmd);

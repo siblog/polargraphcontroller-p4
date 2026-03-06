@@ -8,6 +8,7 @@ class CommandQueue {
   private ArrayList<String> queue;
   private int currentIndex = 0;
   private boolean isRunning = false;
+  private String currentCommand = null;  // Command currently being executed
   
   // Command constants
   private static final String CMD_CHANGELENGTH = "C01,";
@@ -76,9 +77,25 @@ class CommandQueue {
    */
   String pop() {
     if (currentIndex < queue.size()) {
-      return queue.get(currentIndex++);
+      String cmd = queue.get(currentIndex++);
+      currentCommand = cmd;  // Mark this as the current executing command
+      return cmd;
     }
     return null;
+  }
+  
+  /**
+   * Get the currently executing command
+   */
+  String getCurrentCommand() {
+    return currentCommand;
+  }
+  
+  /**
+   * Mark current command as completed (called when READY_100 received)
+   */
+  void markCurrentCommandComplete() {
+    currentCommand = null;
   }
   
   /**
@@ -99,6 +116,7 @@ class CommandQueue {
   void clear() {
     queue.clear();
     currentIndex = 0;
+    currentCommand = null;
     isRunning = false;
   }
   

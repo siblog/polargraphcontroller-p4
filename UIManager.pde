@@ -422,16 +422,43 @@ class QueuePanel extends UIPanel {
     rect(bounds.getLeft(), bounds.getTop() + 25, bounds.getWidth(), bounds.getHeight() - 25);
     
     fill(200);
-    textSize(11);
+    textSize(10);
     textAlign(LEFT, TOP);
     
-    int queueSize = commandQueue.size();
-    int remaining = commandQueue.remaining();
+    float textY = bounds.getTop() + 35;
+    float lineHeight = 14;
     
-    text("Total commands: " + queueSize, bounds.getLeft() + 10, bounds.getTop() + 35);
-    text("Remaining: " + remaining, bounds.getLeft() + 10, bounds.getTop() + 50);
+    // Show current command (being executed)
+    String currentCmd = commandQueue.getCurrentCommand();
+    if (currentCmd != null) {
+      fill(255, 255, 0); // Yellow for current command
+      rect(bounds.getLeft() + 5, textY - 2, bounds.getWidth() - 10, lineHeight);
+      fill(0);
+      text("▶ " + currentCmd, bounds.getLeft() + 10, textY);
+      textY += lineHeight + 2;
+    }
+    
+    // Show queued commands
+    String[] allCommands = commandQueue.getAllCommands();
+    int startIndex = commandQueue.remaining() > 0 ? allCommands.length - commandQueue.remaining() : 0;
+    
+    for (int i = startIndex; i < allCommands.length && i < startIndex + 8; i++) { // Show max 8 queued commands
+      fill(200);
+      String displayCmd = allCommands[i];
+      if (displayCmd.length() > 35) {
+        displayCmd = displayCmd.substring(0, 32) + "...";
+      }
+      text(displayCmd, bounds.getLeft() + 10, textY);
+      textY += lineHeight;
+    }
+    
+    // Show queue status at bottom
+    fill(150);
+    textSize(9);
     text("Status: " + (commandQueue.isRunning() ? "RUNNING" : "IDLE"), 
-         bounds.getLeft() + 10, bounds.getTop() + 65);
+         bounds.getLeft() + 10, bounds.getBottom() - 25);
+    text("Total: " + commandQueue.size() + " | Remaining: " + commandQueue.remaining(), 
+         bounds.getLeft() + 10, bounds.getBottom() - 10);
     
     // Draw buttons
     clearBtn.display();

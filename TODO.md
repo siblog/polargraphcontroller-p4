@@ -21,6 +21,7 @@
 - [x] Add serial port dropdown
 - [x] Display received messages
 - [x] Add slider for motor positions
+- [x] Visual command queue with current command highlighting
 - [ ] Keyboard shortcuts (delete queue item, etc.)
 
 ### Configuration
