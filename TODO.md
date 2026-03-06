@@ -10,22 +10,22 @@
 - [x] Main sketch setup
 
 ### Serial Communication
-- [ ] Fix serialEvent() callback integration
-- [ ] Test serial connection
+- [x] Fix serialEvent() callback integration
+- [x] Test serial connection
+- [x] Receive and parse machine responses
 - [ ] Add serial port selector
-- [ ] Receive and parse machine responses
 - [ ] Handle connection errors gracefully
 
 ### UI Refinements
-- [ ] Improve button styling
-- [ ] Add serial port dropdown
-- [ ] Display received messages
-- [ ] Add slider for motor positions
+- [x] Improve button styling
+- [x] Add serial port dropdown
+- [x] Display received messages
+- [x] Add slider for motor positions
 - [ ] Keyboard shortcuts (delete queue item, etc.)
 
 ### Configuration
-- [ ] Load default.properties on startup
-- [ ] Save configuration changes
+- [x] Load default.properties on startup
+- [x] Save configuration changes
 - [ ] Load custom configurations
 - [ ] Validate configuration values
 

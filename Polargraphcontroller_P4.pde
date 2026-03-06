@@ -118,6 +118,14 @@ void mousePressed() {
   uiManager.handleMousePress(mouseX, mouseY);
 }
 
+void mouseDragged() {
+  uiManager.handleMouseDrag(mouseX, mouseY);
+}
+
+void mouseReleased() {
+  uiManager.handleMouseRelease(mouseX, mouseY);
+}
+
 Config cfg;
 
 void loadConfiguration() {

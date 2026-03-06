@@ -30,11 +30,14 @@ class UIManager {
     // Machine Response Panel
     panels.add(new ResponsePanel(new Rectangle(710, 260, 430, 100)));
     
+    // Motor Control Panel
+    panels.add(new MotorPanel(new Rectangle(710, 370, 430, 120)));
+    
     // Command Queue Panel
-    panels.add(new QueuePanel(new Rectangle(710, 370, 430, 140)));
+    panels.add(new QueuePanel(new Rectangle(710, 500, 430, 140)));
     
     // Controls Panel
-    panels.add(new ControlsPanel(new Rectangle(710, 520, 430, 150)));
+    panels.add(new ControlsPanel(new Rectangle(710, 650, 430, 150)));
   }
   
   void display() {
@@ -56,6 +59,18 @@ class UIManager {
       panel.handleMousePress(x, y);
     }
   }
+  
+  void handleMouseDrag(int x, int y) {
+    for (UIPanel panel : panels) {
+      panel.handleMouseDrag(x, y);
+    }
+  }
+  
+  void handleMouseRelease(int x, int y) {
+    for (UIPanel panel : panels) {
+      panel.handleMouseRelease(x, y);
+    }
+  }
 }
 
 // ==================== BASE PANEL CLASS ====================
@@ -70,6 +85,8 @@ abstract class UIPanel {
   
   abstract void display();
   abstract void handleMousePress(int x, int y);
+  abstract void handleMouseDrag(int x, int y);
+  abstract void handleMouseRelease(int x, int y);
   
   protected void drawPanelHeader(String title) {
     fill(80);
@@ -90,9 +107,14 @@ abstract class UIPanel {
 // ==================== STATUS PANEL ====================
 
 class StatusPanel extends UIPanel {
+  private SimpleButton saveBtn;
+  
   StatusPanel(Rectangle bounds) {
     super(bounds);
     this.title = "Status";
+    
+    float btnY = bounds.getTop() + 65;
+    saveBtn = new SimpleButton(new Rectangle(bounds.getLeft() + 10, btnY, 60, 20), "Save");
   }
   
   void display() {
@@ -114,10 +136,23 @@ class StatusPanel extends UIPanel {
     // queue info
     text("Queue size: " + commandQueue.size(), bounds.getLeft() + 10, bounds.getTop() + 55);
     text("Remaining: " + commandQueue.remaining(), bounds.getLeft() + 200, bounds.getTop() + 55);
+    
+    // Draw save button
+    saveBtn.display();
   }
   
   void handleMousePress(int x, int y) {
-    // No interactive elements yet
+    if (saveBtn.isInBounds(x, y)) {
+      cfg.save();
+    }
+  }
+  
+  void handleMouseDrag(int x, int y) {
+    // No draggable elements
+  }
+  
+  void handleMouseRelease(int x, int y) {
+    // No draggable elements
   }
 }
 
@@ -126,14 +161,27 @@ class StatusPanel extends UIPanel {
 class SerialPanel extends UIPanel {
   private SimpleButton connectBtn;
   private SimpleButton disconnectBtn;
+  private SimpleDropdown portDropdown;
+  private SimpleButton refreshBtn;
+  private boolean dropdownExpanded = false;
   
   SerialPanel(Rectangle bounds) {
     super(bounds);
     this.title = "Serial Connection";
     
-    float btnY = bounds.getTop() + 35;
-    connectBtn = new SimpleButton(new Rectangle(bounds.getLeft() + 10, btnY, 100, 25), "Connect");
-    disconnectBtn = new SimpleButton(new Rectangle(bounds.getLeft() + 120, btnY, 100, 25), "Disconnect");
+    float row1 = bounds.getTop() + 35;
+    float row2 = bounds.getTop() + 65;
+    
+    // Port selection dropdown
+    portDropdown = new SimpleDropdown(new Rectangle(bounds.getLeft() + 10, row1, 200, 25));
+    refreshBtn = new SimpleButton(new Rectangle(bounds.getLeft() + 220, row1, 70, 25), "Refresh");
+    
+    // Connection buttons
+    connectBtn = new SimpleButton(new Rectangle(bounds.getLeft() + 10, row2, 100, 25), "Connect");
+    disconnectBtn = new SimpleButton(new Rectangle(bounds.getLeft() + 120, row2, 100, 25), "Disconnect");
+    
+    // Initialize port list
+    refreshPorts();
   }
   
   void display() {
@@ -146,29 +194,67 @@ class SerialPanel extends UIPanel {
     textSize(10);
     textAlign(LEFT, TOP);
     
-    String portInfo = "Port: ";
+    String statusInfo = "Status: ";
     if (serialComm.isConnected()) {
-      portInfo += serialComm.getPortName() + " (CONNECTED)";
+      statusInfo += "CONNECTED to " + serialComm.getPortName();
     } else {
-      portInfo += "Not connected";
+      statusInfo += "Not connected";
     }
     
-    text(portInfo, bounds.getLeft() + 10, bounds.getTop() + 35);
+    text(statusInfo, bounds.getLeft() + 10, bounds.getTop() + 35);
     
-    // Draw buttons
+    // Draw dropdown and buttons
+    portDropdown.display();
+    refreshBtn.display();
     connectBtn.display();
     disconnectBtn.display();
   }
   
   void handleMousePress(int x, int y) {
+    // Handle dropdown first
+    if (portDropdown.isInBounds(x, y)) {
+      portDropdown.toggle();
+      return;
+    }
+    
+    // Handle dropdown options if expanded
+    if (portDropdown.isExpanded()) {
+      int selectedIndex = portDropdown.getSelectedOption(x, y);
+      if (selectedIndex >= 0) {
+        portDropdown.selectOption(selectedIndex);
+        portDropdown.collapse();
+        return;
+      }
+    }
+    
+    // Handle other buttons
+    if (refreshBtn.isInBounds(x, y)) {
+      refreshPorts();
+    }
     if (connectBtn.isInBounds(x, y)) {
-      String[] ports = serialComm.getAvailablePorts();
-      if (ports.length > 0) {
-        serialComm.connect(ports[0]);
+      String selectedPort = portDropdown.getSelectedValue();
+      if (selectedPort != null && !selectedPort.isEmpty()) {
+        serialComm.connect(selectedPort);
       }
     }
     if (disconnectBtn.isInBounds(x, y)) {
       serialComm.disconnect();
+    }
+  }
+  
+  void handleMouseDrag(int x, int y) {
+    // No draggable elements
+  }
+  
+  void handleMouseRelease(int x, int y) {
+    // No draggable elements
+  }
+  
+  private void refreshPorts() {
+    String[] ports = serialComm.getAvailablePorts();
+    portDropdown.setOptions(ports);
+    if (ports.length > 0 && portDropdown.getSelectedValue() == null) {
+      portDropdown.selectOption(0); // Select first port by default
     }
   }
 }
@@ -228,6 +314,90 @@ class ResponsePanel extends UIPanel {
       serialComm.clearResponseMessages();
     }
   }
+  
+  void handleMouseDrag(int x, int y) {
+    // No draggable elements
+  }
+  
+  void handleMouseRelease(int x, int y) {
+    // No draggable elements
+  }
+}
+
+// ==================== MOTOR CONTROL PANEL ====================
+
+class MotorPanel extends UIPanel {
+  private SimpleSlider motorASlider;
+  private SimpleSlider motorBSlider;
+  private SimpleButton sendBtn;
+  private SimpleButton homeBtn;
+  
+  MotorPanel(Rectangle bounds) {
+    super(bounds);
+    this.title = "Motor Control";
+    
+    float sliderY = bounds.getTop() + 35;
+    float btnY = bounds.getTop() + 75;
+    
+    // Motor position sliders (0 to machine max)
+    motorASlider = new SimpleSlider(new Rectangle(bounds.getLeft() + 10, sliderY, 180, 20), 
+                                   0, cfg.machineWidth, 0);
+    motorBSlider = new SimpleSlider(new Rectangle(bounds.getLeft() + 220, sliderY, 180, 20), 
+                                   0, cfg.machineHeight, 0);
+    
+    // Control buttons
+    sendBtn = new SimpleButton(new Rectangle(bounds.getLeft() + 10, btnY, 80, 25), "Send Pos");
+    homeBtn = new SimpleButton(new Rectangle(bounds.getLeft() + 100, btnY, 80, 25), "Go Home");
+  }
+  
+  void display() {
+    drawPanelHeader(title);
+    
+    fill(60);
+    rect(bounds.getLeft(), bounds.getTop() + 25, bounds.getWidth(), bounds.getHeight() - 25);
+    
+    fill(200);
+    textSize(10);
+    textAlign(LEFT, TOP);
+    
+    // Labels
+    text("Motor A: " + (int)motorASlider.getValue(), bounds.getLeft() + 10, bounds.getTop() + 30);
+    text("Motor B: " + (int)motorBSlider.getValue(), bounds.getLeft() + 220, bounds.getTop() + 30);
+    
+    // Draw sliders and buttons
+    motorASlider.display();
+    motorBSlider.display();
+    sendBtn.display();
+    homeBtn.display();
+  }
+  
+  void handleMousePress(int x, int y) {
+    motorASlider.handleMousePress(x, y);
+    motorBSlider.handleMousePress(x, y);
+    
+    if (sendBtn.isInBounds(x, y)) {
+      float motorA = motorASlider.getValue();
+      float motorB = motorBSlider.getValue();
+      commandQueue.addMoveCommand(motorA, motorB);
+      println("Motor position queued: A=" + (int)motorA + ", B=" + (int)motorB);
+    }
+    if (homeBtn.isInBounds(x, y)) {
+      motorASlider.setValue(cfg.homeX);
+      motorBSlider.setValue(cfg.homeY);
+      commandQueue.add("C09," + cfg.homeX + "," + cfg.homeY + ",END");
+      println("Home position queued: " + cfg.homeX + "," + cfg.homeY);
+    }
+  }
+  
+  void handleMouseDrag(int x, int y) {
+    motorASlider.handleMouseDrag(x, y);
+    motorBSlider.handleMouseDrag(x, y);
+  }
+  
+  void handleMouseRelease(int x, int y) {
+    motorASlider.handleMouseRelease();
+    motorBSlider.handleMouseRelease();
+  }
 }
 
 // ==================== QUEUE PANEL ====================
@@ -276,6 +446,14 @@ class QueuePanel extends UIPanel {
     if (exportBtn.isInBounds(x, y)) {
       println("Export queue feature not yet implemented");
     }
+  }
+  
+  void handleMouseDrag(int x, int y) {
+    // No draggable elements
+  }
+  
+  void handleMouseRelease(int x, int y) {
+    // No draggable elements
   }
 }
 
@@ -340,41 +518,200 @@ class ControlsPanel extends UIPanel {
       println("Queue paused");
     }
   }
+  
+  void handleMouseDrag(int x, int y) {
+    // No draggable elements
+  }
+  
+  void handleMouseRelease(int x, int y) {
+    // No draggable elements
+  }
 }
 
-// ==================== SIMPLE BUTTON ====================
+// ==================== SIMPLE DROPDOWN ====================
 
-class SimpleButton {
+class SimpleDropdown {
   private Rectangle bounds;
-  private String label;
-  private boolean hovered = false;
+  private String[] options;
+  private int selectedIndex = -1;
+  private boolean expanded = false;
+  private int maxVisibleOptions = 5;
   
-  SimpleButton(Rectangle bounds, String label) {
+  SimpleDropdown(Rectangle bounds) {
     this.bounds = bounds;
-    this.label = label;
+    this.options = new String[0];
+  }
+  
+  void setOptions(String[] options) {
+    this.options = options;
+    if (selectedIndex >= options.length) {
+      selectedIndex = -1;
+    }
+  }
+  
+  void selectOption(int index) {
+    if (index >= 0 && index < options.length) {
+      selectedIndex = index;
+    }
+  }
+  
+  String getSelectedValue() {
+    if (selectedIndex >= 0 && selectedIndex < options.length) {
+      return options[selectedIndex];
+    }
+    return null;
+  }
+  
+  void toggle() {
+    expanded = !expanded;
+  }
+  
+  void collapse() {
+    expanded = false;
+  }
+  
+  boolean isExpanded() {
+    return expanded;
+  }
+  
+  boolean isInBounds(int x, int y) {
+    if (expanded) {
+      // Include dropdown area
+      float dropdownHeight = min(options.length, maxVisibleOptions) * bounds.getHeight();
+      return x >= bounds.getLeft() && x < bounds.getRight() &&
+             y >= bounds.getTop() && y < bounds.getBottom() + dropdownHeight;
+    } else {
+      return x >= bounds.getLeft() && x < bounds.getRight() &&
+             y >= bounds.getTop() && y < bounds.getBottom();
+    }
+  }
+  
+  int getSelectedOption(int x, int y) {
+    if (!expanded) return -1;
+    
+    for (int i = 0; i < min(options.length, maxVisibleOptions); i++) {
+      float optionY = bounds.getBottom() + (i * bounds.getHeight());
+      if (y >= optionY && y < optionY + bounds.getHeight()) {
+        return i;
+      }
+    }
+    return -1;
   }
   
   void display() {
-    // Check if mouse is over button
-    hovered = (mouseX >= bounds.getLeft() && mouseX < bounds.getRight() &&
-               mouseY >= bounds.getTop() && mouseY < bounds.getBottom());
-    
-    // Draw button
-    fill(hovered ? 120 : 80);
+    // Draw main dropdown button
+    fill(selectedIndex >= 0 ? 100 : 80);
     stroke(150);
     strokeWeight(1);
     rect(bounds.getLeft(), bounds.getTop(), bounds.getWidth(), bounds.getHeight());
     
-    // Draw label
+    // Draw selected text or placeholder
     fill(255);
     textSize(10);
-    textAlign(CENTER, CENTER);
-    text(label, bounds.getCenterX(), bounds.getCenterY());
+    textAlign(LEFT, CENTER);
+    String displayText = selectedIndex >= 0 ? options[selectedIndex] : "Select port...";
+    text(displayText, bounds.getLeft() + 8, bounds.getCenterY());
+    
+    // Draw dropdown arrow
+    fill(200);
+    triangle(bounds.getRight() - 15, bounds.getCenterY() - 3,
+             bounds.getRight() - 5, bounds.getCenterY() - 3,
+             bounds.getRight() - 10, bounds.getCenterY() + 3);
+    
+    // Draw expanded options
+    if (expanded && options.length > 0) {
+      int visibleOptions = min(options.length, maxVisibleOptions);
+      
+      // Draw dropdown background
+      fill(80);
+      stroke(150);
+      rect(bounds.getLeft(), bounds.getBottom(), bounds.getWidth(), visibleOptions * bounds.getHeight());
+      
+      // Draw each option
+      for (int i = 0; i < visibleOptions; i++) {
+        float optionY = bounds.getBottom() + (i * bounds.getHeight());
+        
+        // Highlight on hover
+        boolean hovered = mouseX >= bounds.getLeft() && mouseX < bounds.getRight() &&
+                         mouseY >= optionY && mouseY < optionY + bounds.getHeight();
+        fill(hovered ? 120 : 80);
+        rect(bounds.getLeft(), optionY, bounds.getWidth(), bounds.getHeight());
+        
+        // Draw option text
+        fill(255);
+        textAlign(LEFT, CENTER);
+        text(options[i], bounds.getLeft() + 8, optionY + bounds.getHeight()/2);
+      }
+    }
+  }
+}
+
+// ==================== SIMPLE SLIDER ====================
+
+class SimpleSlider {
+  private Rectangle bounds;
+  private float minValue, maxValue, currentValue;
+  private boolean dragging = false;
+  
+  SimpleSlider(Rectangle bounds, float minValue, float maxValue, float initialValue) {
+    this.bounds = bounds;
+    this.minValue = minValue;
+    this.maxValue = maxValue;
+    this.currentValue = constrain(initialValue, minValue, maxValue);
+  }
+  
+  void setValue(float value) {
+    currentValue = constrain(value, minValue, maxValue);
+  }
+  
+  float getValue() {
+    return currentValue;
+  }
+  
+  void handleMousePress(int x, int y) {
+    if (isInBounds(x, y)) {
+      dragging = true;
+      updateValueFromMouse(x);
+    }
+  }
+  
+  void handleMouseDrag(int x, int y) {
+    if (dragging) {
+      updateValueFromMouse(x);
+    }
+  }
+  
+  void handleMouseRelease() {
+    dragging = false;
+  }
+  
+  private void updateValueFromMouse(int x) {
+    float relativeX = constrain(x - bounds.getLeft(), 0, bounds.getWidth());
+    float ratio = relativeX / bounds.getWidth();
+    currentValue = minValue + (maxValue - minValue) * ratio;
   }
   
   boolean isInBounds(int x, int y) {
     return x >= bounds.getLeft() && x < bounds.getRight() &&
            y >= bounds.getTop() && y < bounds.getBottom();
+  }
+  
+  void display() {
+    // Draw slider track
+    fill(100);
+    rect(bounds.getLeft(), bounds.getTop() + bounds.getHeight()/2 - 2, 
+         bounds.getWidth(), 4);
+    
+    // Draw slider handle
+    float handleX = bounds.getLeft() + (currentValue - minValue) / (maxValue - minValue) * bounds.getWidth();
+    fill(dragging ? 150 : 120);
+    ellipse(handleX, bounds.getCenterY(), 12, 12);
+    
+    // Draw value text
+    fill(200);
+    textSize(8);
+    textAlign(CENTER, BOTTOM);
+    text(nf(currentValue, 0, 0), handleX, bounds.getTop() - 2);
   }
 }
 

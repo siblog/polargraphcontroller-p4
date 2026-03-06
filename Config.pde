@@ -1,6 +1,7 @@
 import java.util.Properties;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 
 /**
  * Config.pde
@@ -57,6 +58,39 @@ class Config {
       println("Configuration loaded from " + filename);
     } catch (Exception e) {
       println("Failed to load configuration: " + e);
+    }
+  }
+
+  void save() {
+    try {
+      // Update properties with current values
+      props.setProperty("machine.penlift.up", str(penUpPosition));
+      props.setProperty("machine.penlift.down", str(penDownPosition));
+      props.setProperty("machine.pen.size", str(penWidth));
+
+      props.setProperty("machine.motors.maxSpeed", str(motorMaxSpeed));
+      props.setProperty("machine.motors.accel", str(motorAccel));
+
+      props.setProperty("controller.homepoint.x", str(homeX));
+      props.setProperty("controller.homepoint.y", str(homeY));
+
+      props.setProperty("machine.width", str(machineWidth));
+      props.setProperty("machine.height", str(machineHeight));
+
+      // Ensure directory exists
+      File configDir = new File("data/config");
+      if (!configDir.exists()) {
+        configDir.mkdirs();
+      }
+
+      // Save to file
+      FileOutputStream fos = new FileOutputStream(filename);
+      props.store(fos, "Polargraph Controller P4 Configuration");
+      fos.close();
+
+      println("Configuration saved to " + filename);
+    } catch (Exception e) {
+      println("Failed to save configuration: " + e);
     }
   }
 
