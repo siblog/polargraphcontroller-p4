@@ -43,10 +43,12 @@ void setup() {
   displayMachine = new Machine(2790, 2347, 200.0, 40.0);
   serialComm = new SerialComm();
   commandQueue = new CommandQueue();
-  uiManager = new UIManager();
   
-  // Load configuration
+  // Load configuration FIRST
   loadConfiguration();
+  
+  // Initialize UI after configuration is loaded
+  uiManager = new UIManager();
   
   // Setup display
   background(100);
