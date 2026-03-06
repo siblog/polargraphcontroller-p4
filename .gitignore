@@ -1,0 +1,29 @@
+# Processing build files
+build/
+*.class
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+
+# Processing temp files
+applet/
+out/
+
+# User-specific
+data/user_configs/
